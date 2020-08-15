@@ -1,0 +1,3 @@
+[submodule "LDP"]
+	path = LDP
+	url = https://github.com/tLDP/LDP.git
