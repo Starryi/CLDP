@@ -1,0 +1,12 @@
+version: '3.0'
+
+services:
+    cldp:
+        build:
+            context: ../
+            dockerfile: ./build/Dockerfile
+        image: cldp/builder
+        container_name: cldp
+        volumes:
+            - ../:/runner/
+        command: /bin/sh -c "chmod u+x /runner/build/build.sh && /runner/build/build.sh"
