@@ -10,111 +10,143 @@ const CLDP_ORIGIN = CLDP + "/LDP/LDP";
 const CLDP_CLAIM = CLDP + "/Claimed/LDP";
 const CLDP_TRANSLATE = CLDP + "/Translated/LDP";
 
-const skip = "HOWTO-INDEX";
-["faq", "ref", "guide", "howto"].forEach(function (type) {
+const SKIP = "HOWTO-INDEX";
 
-    const translated_docs = [];
-    const claimed_docs = [];
-    const remained_docs = [];
+
+function createDocEntry(category, format, docName) {
+    const claimedDocDirPath = `${CLDP_CLAIM}/${category}/${format}/${docName}`;
+    const translatedDocDirPath = `${CLDP_TRANSLATE}/${category}/${format}/${docName}`;
+    
+    const isClaimed = fs.existsSync(claimedDocDirPath) && fs.statSync(claimedDocDirPath).isDirectory();
+    const isTranslated = fs.existsSync(translatedDocDirPath) && fs.statSync(translatedDocDirPath).isDirectory();
+
+    const originPagePath = `origin/${category}/${docName}/${docName}`;
+    const translatedPagePath = `translated/${category}/${docName}/${docName}`;
+
+    const entry = {
+        name: docName,
+        origin: {
+            txt: `${originPagePath}.txt`,
+            pdf: `${originPagePath}.pdf`,
+            html: `${originPagePath}.html`,
+            singleHtml: `${originPagePath}-single.html`,
+        },
+        translated: {
+            txt: `${translatedPagePath}.txt`,
+            pdf: `${translatedPagePath}.pdf`,
+            html: `${translatedPagePath}.html`,
+            singleHtml: `${translatedPagePath}-single.html`,
+        },
+        isClaimed: isClaimed,
+        isTranslated: isTranslated,
+    };
+
+    return entry;
+}
+
+function statDocsByCategory(category) {
+    const translated = [];
+    const claimed = [];
+    const remained = [];
 
     ["docbook", "linuxdoc"].forEach(function (format) {
-        const format_doc_dir = `${CLDP_ORIGIN}/${type}/${format}`;
-        if (!fs.existsSync(format_doc_dir)) {
+        const formatDirPath = `${CLDP_ORIGIN}/${category}/${format}`;
+        if (!fs.existsSync(formatDirPath)) {
             return;
         }
-        const format_docs = fs.readdirSync(format_doc_dir);
-        format_docs.forEach(function (doc) {
-            const is_claimed = fs.existsSync(`${CLDP_CLAIM}/${type}/${format}/${doc}`);
-            const is_translated = fs.existsSync(`${CLDP_TRANSLATE}/${type}/${format}/${doc}`);
-
-            if (fs.statSync(`${format_doc_dir}/${doc}`).isFile) {
-                doc = path.basename(doc, path.extname(doc));
+        fs.readdirSync(formatDirPath).forEach(function(docName) {
+            const docPath = `${CLDP_ORIGIN}/${category}/${format}/${docName}`;
+            if (fs.statSync(docPath).isFile) {
+                docName = path.basename(docPath, path.extname(docPath));
             }
-            if (doc === skip) {
+            if (docName === SKIP) {
                 return;
             }
-            const entry = {
-                doc: doc,
-                origin: {
-                    txt: `origin/${type}/${doc}/${doc}.txt`,
-                    pdf: `origin/${type}/${doc}/${doc}.pdf`,
-                    html: `origin/${type}/${doc}/${doc}.html`,
-                    single_html: `origin/${type}/${doc}/${doc}-single.html`,
-                },
-                is_claimed: is_claimed,
-                is_translated: is_translated,
-                translated: {
-                    txt: `translated/${type}/${doc}/${doc}.txt`,
-                    pdf: `translated/${type}/${doc}/${doc}.pdf`,
-                    html: `translated/${type}/${doc}/${doc}.html`,
-                    single_html: `translated/${type}/${doc}/${doc}-single.html`,
-                }
-            };
-            if (is_translated) {
-                translated_docs.push(entry);
-            } else if (is_claimed) {
-                claimed_docs.push(entry);
+            const entry = createDocEntry(category, format, docName);
+            if (entry.isTranslated) {
+                translated.push(entry);
+            } else if (entry.isClaimed) {
+                claimed.push(entry);
             } else {
-                remained_docs.push(entry);
+                remained.push(entry);
             }
         });
     });
 
+    return {
+        translated,
+        claimed,
+        remained,
+    };
+}
+
+function createCategoryHtml(category, translatedEntries, claimedEntries, remainedEntries) {
     const content =`<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CLDPP-${type}</title>
+    <title>CLDPP-${category}</title>
 </head>
 <body>
-    <h1>已翻译: ${translated_docs.length}篇</h1>
-    ${translated_docs.map(function(entry) { return `
-    <h2>${entry.doc}</h2>
+    <h1>已翻译: ${translatedEntries.length}篇</h1>
+    ${translatedEntries.map(function(entry) { return `
+    <h2>${entry.name}</h2>
     <h3>原文</h3>
     <ul>
-        <li><a href="${entry.origin.txt}">${entry.doc}.txt</a></li>
-        <li><a href="${entry.origin.pdf}">${entry.doc}.pdf</a></li>
-        <li><a href="${entry.origin.html}">${entry.doc}.html</a></li>
-        <li><a href="${entry.origin.single_html}">${entry.doc}-single.html</a></li>
+        <li><a href="${entry.origin.txt}">${entry.name}.txt</a></li>
+        <li><a href="${entry.origin.pdf}">${entry.name}.pdf</a></li>
+        <li><a href="${entry.origin.html}">${entry.name}.html</a></li>
+        <li><a href="${entry.origin.singleHtml}">${entry.name}-single.html</a></li>
     </ul>
     <h3>译文</h3>
     <ul>
-        <li><a href="${entry.translated.txt}">${entry.doc}.txt</a></li>
-        <li><a href="${entry.translated.pdf}">${entry.doc}.pdf</a></li>
-        <li><a href="${entry.translated.html}">${entry.doc}.html</a></li>
-        <li><a href="${entry.translated.single_html}">${entry.doc}-single.html</a></li>
+        <li><a href="${entry.translated.txt}">${entry.name}.txt</a></li>
+        <li><a href="${entry.translated.pdf}">${entry.name}.pdf</a></li>
+        <li><a href="${entry.translated.html}">${entry.name}.html</a></li>
+        <li><a href="${entry.translated.singleHtml}">${entry.name}-single.html</a></li>
     </ul>
     `}).join('')}
-    <h1>已认领: ${claimed_docs.length}篇</h1>
-    ${claimed_docs.map(function(entry) { return `
-    <h2>${entry.doc}</h2>
+    <h1>已认领: ${claimedEntries.length}篇</h1>
+    ${claimedEntries.map(function(entry) { return `
+    <h2>${entry.name}</h2>
     <h3>原文</h3>
     <ul>
-        <li><a href="${entry.origin.txt}">${entry.doc}.txt</a></li>
-        <li><a href="${entry.origin.pdf}">${entry.doc}.pdf</a></li>
-        <li><a href="${entry.origin.html}">${entry.doc}.html</a></li>
-        <li><a href="${entry.origin.single_html}">${entry.doc}-single.html</a></li>
+        <li><a href="${entry.origin.txt}">${entry.name}.txt</a></li>
+        <li><a href="${entry.origin.pdf}">${entry.name}.pdf</a></li>
+        <li><a href="${entry.origin.html}">${entry.name}.html</a></li>
+        <li><a href="${entry.origin.singleHtml}">${entry.name}-single.html</a></li>
     </ul>
     `}).join('')}
-    <h1>未认领: ${remained_docs.length}篇</h1>
-    ${remained_docs.map(function(entry) { return `
-    <h2>${entry.doc}</h2>
+    <h1>未认领: ${remainedEntries.length}篇</h1>
+    ${remainedEntries.map(function(entry) { return `
+    <h2>${entry.name}</h2>
     <h3>原文</h3>
     <ul>
-        <li><a href="${entry.origin.txt}">${entry.doc}.txt</a></li>
-        <li><a href="${entry.origin.pdf}">${entry.doc}.pdf</a></li>
-        <li><a href="${entry.origin.html}">${entry.doc}.html</a></li>
-        <li><a href="${entry.origin.single_html}">${entry.doc}-single.html</a></li>
+        <li><a href="${entry.origin.txt}">${entry.name}.txt</a></li>
+        <li><a href="${entry.origin.pdf}">${entry.name}.pdf</a></li>
+        <li><a href="${entry.origin.html}">${entry.name}.html</a></li>
+        <li><a href="${entry.origin.singleHtml}">${entry.name}-single.html</a></li>
     </ul>
     `}).join('')}
 </body>
 </html>`;
 
-    const html = `${CLDPP}/${type}.html`;
+    const html = `${CLDPP}/${category}.html`;
     if (fs.existsSync(html)) {
         fs.unlinkSync(html);
     }
     fs.writeFileSync(html, content);
-});
+}
+
+
+function build() {
+    ["faq", "ref", "guide", "howto"].forEach(function(category) {
+        const stat = statDocsByCategory(category);
+        createCategoryHtml(category, stat.translated, stat.claimed, stat.remained);
+    });
+}
+
+build();
+
 
