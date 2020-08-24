@@ -13,6 +13,24 @@ const CLDP_TRANSLATE = CLDP + "/Translated/LDP";
 const SKIP = "HOWTO-INDEX";
 
 
+function fetchTranslators(translatorsPath) {
+    const translators = [];
+    if (fs.existsSync(translatorsPath)) {
+        const data = fs.readFileSync(translatorsPath);
+        data.toString().split('\n').forEach(name => {
+            name = name.trim();
+            if (name !== '') {
+                translators.push({
+                    name,
+                    github: `https://github.com/${name}`
+                });
+            }
+        });
+    }
+    
+    return translators;
+}
+
 function createDocEntry(category, format, docName) {
     const claimedDocDirPath = `${CLDP_CLAIM}/${category}/${format}/${docName}`;
     const translatedDocDirPath = `${CLDP_TRANSLATE}/${category}/${format}/${docName}`;
@@ -37,9 +55,17 @@ function createDocEntry(category, format, docName) {
             html: `${translatedPagePath}.html`,
             singleHtml: `${translatedPagePath}-single.html`,
         },
-        isClaimed: isClaimed,
-        isTranslated: isTranslated,
+        isClaimed: false,
+        isTranslated: false,
+        translators: [],
     };
+    if (isTranslated) {
+        entry.isTranslated = true;
+        entry.translators = fetchTranslators(`${translatedDocDirPath}/TRANSLATORS.txt`);
+    } else if (isClaimed) {
+        entry.isClaimed = true;
+        entry.translators = fetchTranslators(`${claimedDocDirPath}/TRANSLATORS.txt`);
+    }
 
     return entry;
 }
@@ -106,6 +132,12 @@ function createCategoryHtml(category, translatedEntries, claimedEntries, remaine
         <li><a href="${entry.translated.html}">${entry.name}.html</a></li>
         <li><a href="${entry.translated.singleHtml}">${entry.name}-single.html</a></li>
     </ul>
+    <h3>译者</h3>
+    <ul>
+        ${entry.translators.map(function(translator) {
+            return `<li><a href="${translator.github}">${translator.name}</a></li>`;
+        }).join('')}
+    </ul>
     `}).join('')}
     <h1>已认领: ${claimedEntries.length}篇</h1>
     ${claimedEntries.map(function(entry) { return `
@@ -116,6 +148,12 @@ function createCategoryHtml(category, translatedEntries, claimedEntries, remaine
         <li><a href="${entry.origin.pdf}">${entry.name}.pdf</a></li>
         <li><a href="${entry.origin.html}">${entry.name}.html</a></li>
         <li><a href="${entry.origin.singleHtml}">${entry.name}-single.html</a></li>
+    </ul>
+    <h3>译者</h3>
+    <ul>
+        ${entry.translators.map(function(translator) {
+            return `<li><a href="${translator.github}">${translator.name}</a></li>`;
+        }).join('')}
     </ul>
     `}).join('')}
     <h1>未认领: ${remainedEntries.length}篇</h1>
