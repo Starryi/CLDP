@@ -7,8 +7,8 @@ const CLDPP = WORKSPACE + "/CLDPP";
 const CLDP = WORKSPACE + "/CLDP";
 
 const CLDP_ORIGIN = CLDP + "/LDP/LDP";
-const CLDP_CLAIM = CLDP + "/CLDP.Claimed/LDP";
-const CLDP_TRANSLATE = CLDP + "/CLDP.Translated/LDP";
+const CLDP_CLAIM = CLDP + "/Claimed/LDP";
+const CLDP_TRANSLATE = CLDP + "/Translated/LDP";
 
 const skip = "HOWTO-INDEX";
 ["faq", "ref", "guide", "howto"].forEach(function (type) {

@@ -3,8 +3,8 @@ name: Publish CLDP Pages
 on:
   push:
     paths:
-      - 'CLDP.Translated/**/*.*'
-      - 'CLDP.Claimed/**/*.*'
+      - 'Translated/**/*.*'
+      - 'Claimed/**/*.*'
   workflow_dispatch:
 
 jobs:
